@@ -2,69 +2,21 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/database");
 const User = require("./models/user");
-const validationSignup = require("./utils/validation");
-const bcrypt = require('bcrypt');
 const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
 
-
+const authRoutes = require("./routes/auth");
+const profileRoutes = require("./routes/profile");
+const requestRoutes = require("./routes/request");
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser())
 
+app.use("/", authRoutes);
+app.use("/", profileRoutes);
+app.use("/", requestRoutes);
 
-app.post("/signup", async (req, res) => {
-
-    try {
-        validationSignup(req)
-        const { firstName, lastName, emailId, password } = req.body;
-
-        const hashPassword = await bcrypt.hash(password, 10);
-        const user = new User({
-            firstName,
-            lastName,
-            emailId,
-            password: hashPassword
-        });
-        await user.save();
-        res.status(201).json({
-            message: "User created successfully",
-            data: user,
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Something went wrong",
-            error: error.message,
-        });
-    }
-});
-
-app.post("/login", async (req, res) => {
-    const { emailId, password } = req.body;
-
-    try {
-        const user = await User.findOne({ emailId: emailId });
-        if (!user) {
-            throw new Error('invlaid user');
-        }
-        const isPasswordMatch = await bcrypt.compare(password, user.password);
-        if (isPasswordMatch) {
-            const token = await jwt.sign({ _id: user._id }, "Pkrmrj@91");
-            console.log(token)
-            res.cookie("token", token)
-            res.send("User login successfully")
-        } else {
-            throw new Error("Invalid Credientails");
-        }
-
-
-
-    } catch (error) {
-
-    }
-})
 
 app.get('/user', async (req, res) => {
     const { emailId } = req.body;
@@ -74,20 +26,6 @@ app.get('/user', async (req, res) => {
     } catch (error) {
         console.log(error.message)
     }
-})
-
-//get user profile
-app.get("/profile", async (req, res) => {
-    const cookies = req.cookies;
-
-    const { token } = cookies;
-
-    const decodedMessage = await jwt.verify(token, "Pkrmrj@91");
-    console.log(decodedMessage);
-
-    const user = await User.findById({ _id: decodedMessage._id })
-
-    res.send(user)
 })
 
 //get all user
