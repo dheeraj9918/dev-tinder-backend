@@ -2,7 +2,8 @@ const express = require('express');
 const User = require('../models/user');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const validationSignup = require("../utils/validation");
+const { validationSignup } = require('../utils/validation');
+
 
 router.post("/signup", async (req, res) => {
 
@@ -53,6 +54,11 @@ router.post("/login", async (req, res) => {
     } catch (error) {
 
     }
+})
+
+router.post("/logout", async(req,res)=>{
+    res.clearCookie("token");
+    res.send("User logged out successfully")
 })
 
 module.exports = router;
