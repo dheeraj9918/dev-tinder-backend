@@ -52,20 +52,23 @@ router.get("/user/connections", userAuth, async (req, res) => {
         res.status(400).send({ error: error.message });
     }
 });
+
 // get user feed who is not connected and not requested
 router.get("/user/feed", userAuth, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        let limit = parseInt(req.query.limit) || 10;
-        if (limit > 50) limit = 50; // Max limit to prevent abuse
-        
-        const skip = (page - 1) * limit;
 
         const user = req.user;
+
+        const page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 10;
+        if (limit > 50) limit = 50;
+        const skip = (page - 1) * limit;
+
+        // Validate user authentication
         if (!user) {
             return res.status(401).json({ message: "Unauthorized" });
         }
-
+       // Fetch all connection requests involving the logged-in user
         const requests = await ConnectionRequestModel.find({
             $or: [
                 { fromUserId: user._id },
@@ -73,20 +76,18 @@ router.get("/user/feed", userAuth, async (req, res) => {
             ]
         });
 
+        // Create a set of user IDs to exclude from the feed
         const hideTheUserFromFeed = new Set();
         requests.forEach(request => {
             hideTheUserFromFeed.add(request.fromUserId.toString());
             hideTheUserFromFeed.add(request.toUserId.toString());
         });
-
         hideTheUserFromFeed.add(user._id.toString());
 
-        console.log("Users to hide from feed:", hideTheUserFromFeed);
 
         const feedUsers = await User.find({
             _id: { $nin: Array.from(hideTheUserFromFeed) }
-        })
-            .select("firstName lastName photoUrl about skills")
+        }).select("firstName lastName photoUrl about skills")
             .skip(skip)
             .limit(limit);
 
@@ -96,7 +97,7 @@ router.get("/user/feed", userAuth, async (req, res) => {
 
         res.status(200).json({ message: "User feed fetched successfully", data: feedUsers });
     } catch (error) {
-        console.error(error);
+        
         res.status(500).json({ message: "Something went wrong", error });
     }
 });
